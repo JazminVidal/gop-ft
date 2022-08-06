@@ -1,8 +1,80 @@
 import numpy as np
 from IPython import embed
+from src.utils.syllabify import syllabify
+
 
 # Function that reads transcriptions files and loads them to
 # a series of useful dictionaries
+
+def syllabify_phrase(phones):
+    phrase_syllabic = syllabify(phones)
+    
+    syllables = []
+    for tup in phrase_syllabic: 
+        syl = []
+        for t in tup:
+            for e in t:
+                syl.append(e)
+        syllables.append(syl)
+    return syllables
+
+
+def syllabify_scores_and_labels(syllables, scores, labels, annots):
+    syl_phrase = []
+    syl_scores = []
+    all_labels = []
+    syl_annots = []
+    
+    firsti = 0
+    for elem in syllables: 
+        syl_str = []
+        nexti = firsti + len(elem)
+        syl_scores.append(sum(scores[firsti:nexti])/(nexti-firsti))
+        all_labels.append(labels[firsti:nexti])
+        syl_annots.append(annots[firsti:nexti])
+        firsti = nexti
+        
+        for e in elem:
+            s = ''.join(str(e) for e in elem)
+        syl_str = ''.join(s)
+        syl_phrase.append(syl_str)
+    
+    syl_labels = []
+    for labels in all_labels:
+        if 0 in set(labels):
+            syl_labels.append(0)
+        else:
+            syl_labels.append(1)
+    return syl_phrase, syl_scores, syl_labels, syl_annots
+
+
+def syllabify_scores_and_labels_max(syllables, scores, labels, annots):
+    syl_phrase = []
+    syl_scores = []
+    all_labels = []
+    syl_annots = []
+    
+    firsti = 0
+    for elem in syllables: 
+        syl_str = []
+        nexti = firsti + len(elem)
+        syl_scores.append(np.max(scores[firsti:nexti]))
+        all_labels.append(labels[firsti:nexti])
+        syl_annots.append(annots[firsti:nexti])
+        firsti = nexti
+        
+        for e in elem:
+            s = ''.join(str(e) for e in elem)
+        syl_str = ''.join(s)
+        syl_phrase.append(syl_str)
+    
+    syl_labels = []
+    for labels in all_labels:
+        if 0 in set(labels):
+            syl_labels.append(0)
+        else:
+            syl_labels.append(1)
+    return syl_phrase, syl_scores, syl_labels, syl_annots
 
 def generate_dict_from_transcripctions(transcriptions):
 

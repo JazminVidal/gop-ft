@@ -1,9 +1,14 @@
+import os
+import glob
+import numpy as np
 from pathlib import Path
+
 import torch
+import torch.nn as nn
 import torch.optim as optim
+
 import wandb
 from IPython import embed
-import numpy as np
 
 
 def unpack_logids_from_batch(batch):
@@ -33,6 +38,9 @@ def unpack_transcriptions_from_batch(batch):
 def unpack_durations_from_batch(batch):
     return  torch.stack([item['durations'] for item in batch])
 
+def unpack_cum_matrix_from_batch(batch):
+    return torch.stack([item['cum_matrix'] for item in batch])
+
 def re_pad_index(index):
     last_i = 0
     non_zero = True
@@ -53,6 +61,25 @@ def unpack_transitions_from_batch(batch):
         trans_index = np.array([batch_position, index])
         all_indexes.append(trans_index)
     return np.stack([ind for ind in all_indexes], axis=1)
+
+def get_max_row_and_col_length(list_of_tensors):
+    mr = []
+    mc = []
+    for t in list_of_tensors: 
+        mr.append(t.shape[0])
+        mc.append(t.shape[1])
+    return np.max(mr), np.max(mc)
+
+def ConstantPad2d(list_of_tensors, mr, mc):
+    padded = []
+    for t in list_of_tensors: 
+        r0 = t.shape[0]
+        c0 = t.shape[1]
+        pad = nn.ConstantPad2d((0, mc-c0, 0, mr-r0), 0)
+        padded.append(pad(t))
+    return padded    
+
+
 
 def collate_fn_padd(batch):
     '''
@@ -75,7 +102,11 @@ def collate_fn_padd(batch):
     batch_transcripts = torch.nn.utils.rnn.pad_sequence(batch_transcripts, batch_first=True, padding_value=0)
     batch_durations = [item['durations'] for item in batch]
     batch_durations = torch.nn.utils.rnn.pad_sequence(batch_durations, batch_first=True, padding_value=0)
-    
+    batch_cum_matrix  = [item['cum_matrix'] for item in batch]
+    mr, mc = get_max_row_and_col_length(batch_cum_matrix)
+    batch_cum_matrix = ConstantPad2d(batch_cum_matrix, mr, mc)
+
+
     for i in range(len(batch)):
         batch[i]['features']   = batch_features[i]
         batch[i]['pos_labels'] = batch_pos_labels[i]
@@ -85,6 +116,7 @@ def collate_fn_padd(batch):
         batch[i]['transition_indexes'] = batch_indexes[i]
         batch[i]['transcription'] = batch_transcripts[i]
         batch[i]['durations'] = batch_durations[i]
+        batch[i]['cum_matrix'] = batch_cum_matrix[i]
     return batch
 
 #phone_sym2int_dict:  Dictionary mapping phone symbol to integer given a phone list path

@@ -7,12 +7,10 @@ from scipy.stats.stats import pearsonr
 from IPython import embed
 import pandas as pd
 import joblib
-import shutil
-import argparse
-import glob
+from src.utils.reference_utils import syllabify_phrase, syllabify_scores_and_labels, syllabify_scores_and_labels_max
 
-from src.utils.reference_utils import *
-from src.utils.finetuning_utils import *
+from src.utils.reference_utils import generate_utterance_list_from_path, get_reference_from_system_alignments
+from src.utils.finetuning_utils import get_phone_dictionaries
 
 def phonelist2str(phones):
     return " ".join(["%3s"%p for p in phones])
@@ -96,7 +94,6 @@ def get_gop_alignments(path_filename, phone_int2sym_dict):
 
 
 def match_labels2gop(logid, trans_zero, trans_manual, trans_auto, labels, gop_scores):
-
     rows = []
     j = 0
     position = 1
@@ -121,8 +118,30 @@ def match_labels2gop(logid, trans_zero, trans_manual, trans_auto, labels, gop_sc
         j = j + 1
 
     columns = ['logid', 'phone_automatic', 'label', 'gop_scores', 'phone_manual', 'position']
+    
     df = pd.DataFrame(rows, columns=columns)
     return df
+
+def match_labels2gop_syllabic(df):
+    phones = list(df.phone_automatic)
+    labels = list(df.label)
+    scores = list(df.gop_scores)
+    annots = list(df.phone_manual)
+    syllables = syllabify_phrase(phones)
+    syl_phrase, syl_scores, syl_labels, syl_annots = syllabify_scores_and_labels_max(syllables, scores, labels, annots)
+    logids = [df['logid'][0]]*(len(syl_phrase))
+    positions = [i for i in range(1,len(syl_phrase)+1)]
+        
+    dfr = pd.DataFrame(
+        {'logid'          : logids,
+         'phone_automatic': syl_phrase,
+         'label'          : syl_labels, 
+         'gop_scores'     : syl_scores, 
+         'phone_manual'   : syl_annots,
+         'position'       : positions
+        })
+
+    return dfr
 
 def get_reference(file):
     reference = []
@@ -140,8 +159,6 @@ def get_reference(file):
     return reference, annot_manual, labels
 
 
-
-
 def main(config_dict):
     reference_transcriptions_path = config_dict['reference-trans-path']
     utterance_list_path           = config_dict['utterance-list-path']
@@ -153,13 +170,13 @@ def main(config_dict):
 
     # Code that generates a pickle with useful data to analyze.
     # The outpul will be used to compute ROCs, AUCs and EERs.
-
+    #eval_by_syl = True
     _, phone_int2sym_dict, _ = get_phone_dictionaries(phones_list_path)
     gop_alignments = get_gop_alignments(gop_path, phone_int2sym_dict)
 
     utterance_list = generate_utterance_list_from_path(utterance_list_path) 
     trans_dict = get_reference_from_system_alignments(reference_transcriptions_path, labels_dir_path, gop_alignments, utterance_list)
-
+ 
     # Now, iterate over utterances
     output = []
     for utterance in utterance_list:
@@ -171,7 +188,14 @@ def main(config_dict):
         labels              = trans_dict[utterance]["labels"]
         trans_zero          = trans_dict[utterance]["best_ref_auto_zero"]
 
-        df = match_labels2gop(utterance, trans_zero, annot_manual, annot_kaldi, labels, gop_scores)
+        df_phone = match_labels2gop(utterance, trans_zero, annot_manual, annot_kaldi, labels, gop_scores)
+        
+        df = match_labels2gop_syllabic(df_phone)
+        #if eval_by_syl:
+            #df = match_labels2gop_syllabic(df_phone)
+        #else: 
+        #    df = df_phone
+        
         output.append(df)
 
 

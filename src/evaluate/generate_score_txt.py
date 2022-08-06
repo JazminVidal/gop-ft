@@ -1,5 +1,4 @@
 # Nuevo
-from pathlib import Path
 from src.pytorch_models.FTDNNPronscorer import FTDNNPronscorer
 
 import torch
@@ -16,12 +15,12 @@ def removeSymbols(str, symbols):
         str = str.replace(symbol,'')
     return str
 
-def generate_scores_for_testset(model, testloader):
+def generate_scores_for_testset(model, testloader, summarize):
     print('Generating scores for testset')
     
-    normalize = True
     evaluation = True
     loss_per_phone = False 
+    #summarize = False
   
     scores = {}
     for i, batch in enumerate(testloader, 0):       
@@ -34,7 +33,8 @@ def generate_scores_for_testset(model, testloader):
         batch_transcripts =  unpack_transcriptions_from_batch(batch)
         batch_phone_durs = unpack_durations_from_batch(batch)
     
-        outputs = (-1) * model(features, loss_per_phone, evaluation, batch_target_phones, batch_indexes, normalize, phone_durs=batch_phone_durs)
+        outputs = (-1) * model(features, loss_per_phone, evaluation, batch_target_phones, batch_indexes, 
+                              summarize, phone_durs=batch_phone_durs)
         
         for j, logid in enumerate(logids):
           
@@ -74,6 +74,7 @@ def main(config_dict):
     conf_path           = config_dict['features-conf-path']
     device_name         = config_dict['device']
     batchnorm           = config_dict['batchnorm']
+    summarize           = config_dict['summarize']
 
     testset = EpaDB(sample_list, phone_list_path, labels_dir, features_path, conf_path)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
@@ -93,7 +94,7 @@ def main(config_dict):
     phone_dict = testset._phone_sym2int_dict
     
     # Con el modelo y los datos de test generamos el score
-    scores = generate_scores_for_testset(model, testloader)
+    scores = generate_scores_for_testset(model, testloader, summarize)
     # Después los abre para loguearlos
     score_log_fh = open(gop_txt_dir+ '/' + gop_txt_name, 'w+')
     log_testset_scores_to_txt(scores, score_log_fh, phone_dict)

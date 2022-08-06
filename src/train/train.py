@@ -228,27 +228,26 @@ def choose_starting_epoch(epochs, state_dict_dir, run_name, fold, model, optimiz
     return model, optimizer, scheduler, step, start_from_epoch
 
 def foward_backward_pass(data, model, optimizer, phone_weights, phone_int2sym, phone_int2node,
-                         norm_per_phone_and_class, loss_per_phone, normalize): 
+                         norm_per_phone_and_class, loss_per_phone): 
     evaluation = False
+    
     inputs       = unpack_features_from_batch(data).to(device)
     batch_labels = unpack_labels_from_batch(data).to(device)
     batch_target_phones = unpack_ids_from_batch(data).to(device)
-    batch_indexes = unpack_transitions_from_batch(data) # numpy
+    batch_cum_matrix = unpack_cum_matrix_from_batch(data).to(device)
     
     # zero the parameter gradients
     optimizer.zero_grad()
 
-    outputs = model(inputs, loss_per_phone, evaluation, batch_target_phones, batch_indexes, normalize)
+    outputs = model(inputs, loss_per_phone, evaluation, batch_target_phones, batch_cum_matrix)
     
     if loss_per_phone: 
-        collapsed_labels =torch.cat((
-                      torch.zeros(batch_labels.shape[0],1,batch_labels.shape[2]).to(device),
-                      torch.cumsum(batch_labels,1)[torch.tensor(batch_indexes[0,:]),torch.tensor(batch_indexes[1,:])]),  dim=1)
-        batch_labels_r  =  torch.sign(torch.diff(collapsed_labels,dim=1)).to(device)
+        labels = torch.sign(torch.matmul(batch_cum_matrix, batch_labels))
     else: 
-        batch_labels_r = batch_labels
+        labels = batch_labels
 
-    loss = criterion_fast(outputs, batch_labels_r, weights=phone_weights, phone_int2sym=phone_int2sym, phone_int2node=phone_int2node, norm_per_phone_and_class=norm_per_phone_and_class, min_frame_count=0)
+    loss = criterion_fast(outputs, labels, weights=phone_weights, phone_int2sym=phone_int2sym, 
+                        phone_int2node=phone_int2node, norm_per_phone_and_class=norm_per_phone_and_class, min_frame_count=0)
 
     loss.requires_grad_()
 
@@ -256,25 +255,25 @@ def foward_backward_pass(data, model, optimizer, phone_weights, phone_int2sym, p
 
     return loss
 
-def log_loss_if_first_batch(epoch, i, fold, loss, model, testloader, step, loss_per_phone, normalize):
+def log_loss_if_first_batch(epoch, i, fold, loss, model, testloader, step, loss_per_phone):
     if epoch == 0 and i == 0:
         wandb.log({'train_loss_fold_' + str(fold): loss, 'step' : step})
-        test_loss, test_loss_dict = test(model, testloader, loss_per_phone, normalize)
+        test_loss, test_loss_dict = test(model, testloader, loss_per_phone)
         step = log_test_loss(fold, test_loss, step, test_loss_dict)
 
     return step
 
 
 def train_one_epoch(trainloader, testloader, model, optimizer, running_loss, fold, epoch, step, use_clipping, phone_weights, 
-                    phone_int2sym, phone_int2node, norm_per_phone_and_class, loss_per_phone, normalize):
+                    phone_int2sym, phone_int2node, norm_per_phone_and_class, loss_per_phone):
 
 
     for i, data in enumerate(trainloader, 0):
 
         loss = foward_backward_pass(data, model, optimizer, phone_weights, phone_int2sym, phone_int2node, 
-                                    norm_per_phone_and_class,  loss_per_phone, normalize)
+                                    norm_per_phone_and_class,  loss_per_phone)
 
-        step = log_loss_if_first_batch(epoch, i, fold, loss, model, testloader, step, loss_per_phone, normalize)
+        step = log_loss_if_first_batch(epoch, i, fold, loss, model, testloader, step, loss_per_phone)
 
         if use_clipping:
             nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0, error_if_nonfinite=True, norm_type=2)
@@ -291,7 +290,7 @@ def define_scheduler_from_config(scheduler_config, optimizer):
     return eval(scheduler_config)
 
 def train(model, trainloader, testloader, fold, epochs, swa_epochs, state_dict_dir, run_name, layer_amount, 
-        use_dropout, lr, scheduler_config, swa_lr, use_clipping, batchnorm, norm_per_phone_and_class, loss_per_phone, normalize):
+        use_dropout, lr, scheduler_config, swa_lr, use_clipping, batchnorm, norm_per_phone_and_class, loss_per_phone):
     global phone_weights, phone_count, device, checkpoint_step
 
 
@@ -317,9 +316,9 @@ def train(model, trainloader, testloader, fold, epochs, swa_epochs, state_dict_d
         
         running_loss, step, model, optimizer = train_one_epoch(trainloader, testloader, model, optimizer, running_loss, 
                                                                 fold, epoch, step, use_clipping, phone_weights, phone_int2sym, 
-                                                                phone_int2node, norm_per_phone_and_class, loss_per_phone, normalize)
+                                                                phone_int2node, norm_per_phone_and_class, loss_per_phone)
 
-        test_loss, test_loss_dict = test(model, testloader, loss_per_phone, normalize)
+        test_loss, test_loss_dict = test(model, testloader, loss_per_phone)
         step = log_test_loss(fold, test_loss, step, test_loss_dict)
 
         if scheduler is not None:
@@ -338,28 +337,27 @@ def train(model, trainloader, testloader, fold, epochs, swa_epochs, state_dict_d
             save_state_dict(state_dict_dir, run_name, fold, epoch+1, step, model, optimizer, scheduler)
 
 
-def test(model, testloader, loss_per_phone, normalize):
+def test(model, testloader, loss_per_phone):
 
     global phone_weights, phone_count, phone_int2sym, phone_int2node, device
     evaluation = False
     total_loss = 0
     for i, batch in enumerate(testloader, 0):
         features = unpack_features_from_batch(batch).to(device)
-        labels   = unpack_labels_from_batch(batch).to(device)
+        batch_labels   = unpack_labels_from_batch(batch).to(device)
         batch_target_phones = unpack_ids_from_batch(batch).to(device)
-        batch_indexes = unpack_transitions_from_batch(batch)
+        batch_cum_matrix = unpack_cum_matrix_from_batch(batch).to(device)
         
-        outputs = model(features, loss_per_phone, evaluation, batch_target_phones, batch_indexes, normalize)
+        outputs = model(features, loss_per_phone, evaluation, batch_target_phones, batch_cum_matrix)
 
-        if loss_per_phone: 
-            collapsed_labels =torch.cat((
-                      torch.zeros(labels.shape[0],1,labels.shape[2]).to(device),
-                      torch.cumsum(labels,1)[torch.tensor(batch_indexes[0,:]),torch.tensor(batch_indexes[1,:])]),  dim=1)
-            labels_r  = torch.sign(torch.diff(collapsed_labels,dim=1)).to(device)
+        if loss_per_phone:
+            labels = torch.sign(torch.matmul(batch_cum_matrix, batch_labels))
+
         else: 
-            labels_r = labels
+            labels = batch_labels
+        
         loss_dict = {}
-        loss, loss_dict = criterion_fast(outputs, labels_r, weights=phone_weights, 
+        loss, loss_dict = criterion_fast(outputs, labels, weights=phone_weights, 
                                          log_per_phone_and_class_loss=True, phone_int2sym=phone_int2sym, phone_int2node=phone_int2node)
 
         loss = loss.item()
@@ -397,7 +395,6 @@ def main(config_dict):
     device_name              = config_dict["device"]
     checkpoint_step          = config_dict["checkpoint-step"]
     loss_per_phone           = config_dict["loss-per-phone"]
-    normalize                = config_dict["normalize"]
 
 
 
@@ -436,4 +433,4 @@ def main(config_dict):
     wandb.watch(model, log_freq=100)
     train(model, trainloader, testloader, fold, epochs, swa_epochs, state_dict_dir, run_name, layer_amount, 
           use_dropout, learning_rate, scheduler_config, swa_lr, use_clipping, batchnorm, 
-          norm_per_phone_and_class,  loss_per_phone, normalize)
+          norm_per_phone_and_class,  loss_per_phone)

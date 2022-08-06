@@ -11,7 +11,8 @@
   checkpoint-step:          25
   dropout-p:                0.4
   batchnorm:                "last"
-  norm-per-phone-and-class: true
+  norm-per-phone-and-class: false
+  loss-per-phone:           true
   use-clipping:             false
   use-multi-process:        false
   phones-list-path:         "phones/kaldi/phones-list.txt"

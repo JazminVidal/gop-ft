@@ -11,7 +11,6 @@ from torchaudio.datasets.utils import (
 )
 from typing import List
 
-#from src.utils.utils import *
 from src.utils.finetuning_utils import *
 from src.utils.FeatureManager import FeatureManager
 
@@ -101,6 +100,7 @@ class EpaDB(Dataset):
         phone_times = []
         transition_indexes =  []
         durations = []
+        cum_matrix = np.zeros([features.shape[0]])
 
         with open(annotation_path + ".txt") as f:
             for line in f.readlines():
@@ -133,6 +133,10 @@ class EpaDB(Dataset):
                     target_phone_int = self._phone_sym2int_dict[target_phone]
                     target_node      = self.phone_int2node_dict[target_phone_int]
                     transcriptions.append(target_phone_int)
+
+                    cum_vec = np.zeros([features.shape[0]])
+                    cum_vec[start_time:end_time] = 1
+                    cum_matrix = np.column_stack((cum_matrix, cum_vec))
 
                     #If the phone was mispronounced, put a -1 in the labels
                     #If the phone was pronounced correcly, put a 1 in the labels
@@ -174,7 +178,8 @@ class EpaDB(Dataset):
                        'transition_indexes': torch.from_numpy(np.asarray(transition_indexes)), 
                        'ids'          : torch.from_numpy(ids),
                        'transcription': torch.from_numpy(np.asarray(transcriptions)),
-                       'durations' : torch.from_numpy(np.asarray(durations))
+                       'durations' : torch.from_numpy(np.asarray(durations)), 
+                       'cum_matrix': torch.from_numpy(cum_matrix[:,1:].T)
                       }
 
         return output_dict

@@ -1,15 +1,18 @@
 ---
-  phone-weights-path:       "configs/phone_weights_trivial.yaml"
-  folds:                    2
-  epochs:                   10
+  phone-weights-path:       "configs/phone_weights_50.yaml"
+  folds:                    6
+  epochs:                   600
+  swa_epochs:               0
   layers:                   1
-  learning-rate:            0.005
-  batch-size:               4
+  scheduler:               "StepLR(optimizer, 10, gamma=0.9, last_epoch=-1, verbose=True)"
+  learning-rate:            0.01
+  batch-size:               32
   use-dropout:              true
-  checkpoint-step:          2
+  checkpoint-step:          25
   dropout-p:                0.4
   batchnorm:                "last"
   norm-per-phone-and-class: false
+  loss-per-phone:           false
   use-clipping:             false
   use-multi-process:        false
   phones-list-path:         "phones/kaldi/phones-list.txt"

@@ -1,5 +1,6 @@
 import argparse
-from src.DataprepStages import PrepareFeaturesAndModelsStage, ComplexStage, AlignCrossValStage, AlignHeldoutStage, CreateLabelsCrossValStage, CreateLabelsHeldoutStage
+from src.Stages import ComplexStage
+from src.DataprepStages import PrepareFeaturesAndModelsStage, AlignCrossValStage, AlignHeldoutStage, CreateLabelsCrossValStage, CreateLabelsHeldoutStage
 from src.Config import DataprepConfig
 
 
