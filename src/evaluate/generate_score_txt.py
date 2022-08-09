@@ -1,4 +1,4 @@
-# Nuevo
+# mod
 from src.pytorch_models.FTDNNPronscorer import FTDNNPronscorer
 
 import torch
@@ -15,7 +15,7 @@ def removeSymbols(str, symbols):
         str = str.replace(symbol,'')
     return str
 
-def generate_scores_for_testset(model, testloader, summarize):
+def generate_scores_for_testset(model, testloader):
     print('Generating scores for testset')
     
     evaluation = True
@@ -29,19 +29,20 @@ def generate_scores_for_testset(model, testloader, summarize):
         logids      = unpack_logids_from_batch(batch)
         features    = unpack_features_from_batch(batch)
         batch_target_phones = unpack_ids_from_batch(batch)
-        batch_indexes = unpack_transitions_from_batch(batch)
         batch_transcripts =  unpack_transcriptions_from_batch(batch)
-        batch_phone_durs = unpack_durations_from_batch(batch)
+        batch_cum_matrix = unpack_cum_matrix_from_batch(batch)
+
     
-        outputs = (-1) * model(features, loss_per_phone, evaluation, batch_target_phones, batch_indexes, 
-                              summarize, phone_durs=batch_phone_durs)
+        outputs = (-1) * model(features, loss_per_phone, evaluation, 
+                                batch_target_phones, batch_cum_matrix)
+
+    
         
-        for j, logid in enumerate(logids):
+        for j, logid in enumerate(logids, 0):
           
             p = batch_transcripts[j].detach().numpy()
             o = outputs[j].detach().numpy()
-            scores[logid] = [o[p!=0], p[p!=0]]
-            #embed()
+            scores[logid] = [o[o!=0], p[p!=0]]
         
     return scores
 
@@ -55,7 +56,7 @@ def log_sample_scores_to_txt(logid, sample_scores, score_log_fh):
         score_log_fh.write( '[ ' + str(phone_number[i]) + ' ' + str(score)  + ' ] ')
     score_log_fh.write('\n')
 
-def log_testset_scores_to_txt(scores, score_log_fh, phone_dict):
+def log_testset_scores_to_txt(scores, score_log_fh):
     print('Writing scores to .txt')
     for logid, sample_score in scores.items():
         log_sample_scores_to_txt(logid, sample_score, score_log_fh)
@@ -74,7 +75,7 @@ def main(config_dict):
     conf_path           = config_dict['features-conf-path']
     device_name         = config_dict['device']
     batchnorm           = config_dict['batchnorm']
-    summarize           = config_dict['summarize']
+
 
     testset = EpaDB(sample_list, phone_list_path, labels_dir, features_path, conf_path)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
@@ -93,9 +94,7 @@ def main(config_dict):
 
     phone_dict = testset._phone_sym2int_dict
     
-    # Con el modelo y los datos de test generamos el score
-    scores = generate_scores_for_testset(model, testloader, summarize)
-    # Después los abre para loguearlos
+    scores = generate_scores_for_testset(model, testloader)
     score_log_fh = open(gop_txt_dir+ '/' + gop_txt_name, 'w+')
-    log_testset_scores_to_txt(scores, score_log_fh, phone_dict)
+    log_testset_scores_to_txt(scores, score_log_fh)
 

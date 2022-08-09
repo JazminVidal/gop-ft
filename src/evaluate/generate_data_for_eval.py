@@ -188,9 +188,9 @@ def main(config_dict):
         labels              = trans_dict[utterance]["labels"]
         trans_zero          = trans_dict[utterance]["best_ref_auto_zero"]
 
-        df_phone = match_labels2gop(utterance, trans_zero, annot_manual, annot_kaldi, labels, gop_scores)
+        df = match_labels2gop(utterance, trans_zero, annot_manual, annot_kaldi, labels, gop_scores)
         
-        df = match_labels2gop_syllabic(df_phone)
+        #df = match_labels2gop_syllabic(df_phone)
         #if eval_by_syl:
             #df = match_labels2gop_syllabic(df_phone)
         #else: 

@@ -5,7 +5,6 @@ from IPython import embed
 from src.pytorch_models.FTDNN import FTDNN
 
 def summarize_outputs_per_phone(outputs, batch_target_phones, batch_cum_matrix): 
-    cuda0 = torch.device('cuda:0')
     masked_outputs = outputs*abs(batch_target_phones)
     summarized_outputs = torch.matmul(batch_cum_matrix, masked_outputs)
     frame_counts = torch.matmul(batch_cum_matrix, batch_target_phones)
