@@ -229,7 +229,7 @@ def choose_starting_epoch(epochs, state_dict_dir, run_name, fold, model, optimiz
 
 def foward_backward_pass(data, model, optimizer, phone_weights, phone_int2sym, phone_int2node,
                          norm_per_phone_and_class, loss_per_phone): 
-    evaluation = False
+    eval = False
     
     inputs       = unpack_features_from_batch(data).to(device)
     batch_labels = unpack_labels_from_batch(data).to(device)
@@ -239,7 +239,7 @@ def foward_backward_pass(data, model, optimizer, phone_weights, phone_int2sym, p
     # zero the parameter gradients
     optimizer.zero_grad()
 
-    outputs = model(inputs, loss_per_phone, evaluation, batch_target_phones, batch_cum_matrix)
+    outputs = model(inputs, loss_per_phone, eval, batch_target_phones, batch_cum_matrix)
     
     if loss_per_phone: 
         labels = torch.sign(torch.matmul(batch_cum_matrix, batch_labels))
@@ -340,7 +340,7 @@ def train(model, trainloader, testloader, fold, epochs, swa_epochs, state_dict_d
 def test(model, testloader, loss_per_phone):
 
     global phone_weights, phone_count, phone_int2sym, phone_int2node, device
-    evaluation = False
+    eval = False
     total_loss = 0
     for i, batch in enumerate(testloader, 0):
         features = unpack_features_from_batch(batch).to(device)
@@ -348,7 +348,7 @@ def test(model, testloader, loss_per_phone):
         batch_target_phones = unpack_ids_from_batch(batch).to(device)
         batch_cum_matrix = unpack_cum_matrix_from_batch(batch).to(device)
         
-        outputs = model(features, loss_per_phone, evaluation, batch_target_phones, batch_cum_matrix)
+        outputs = model(features, loss_per_phone, eval, batch_target_phones, batch_cum_matrix)
 
         if loss_per_phone:
             labels = torch.sign(torch.matmul(batch_cum_matrix, batch_labels))
@@ -395,6 +395,7 @@ def main(config_dict):
     device_name              = config_dict["device"]
     checkpoint_step          = config_dict["checkpoint-step"]
     loss_per_phone           = config_dict["loss-per-phone"]
+
 
 
 

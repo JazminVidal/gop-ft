@@ -13,7 +13,8 @@
   batchnorm:                "none"
   norm-per-phone-and-class: false
   loss-per-phone:           true
-  summarize:                "sum"
+  summarize:                "mean"
+  evaluation:               "phone"
   use-clipping:             false
   use-multi-process:        false
   phones-list-path:         "phones/kaldi/phones-list.txt"

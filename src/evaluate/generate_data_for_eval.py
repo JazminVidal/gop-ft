@@ -167,6 +167,7 @@ def main(config_dict):
     gop_path                      = config_dict['full-gop-score-path']
     phones_list_path              = config_dict['phones-list-path']
     labels_dir_path               = config_dict['auto-labels-dir-path']
+    evaluation                    = config_dict['evaluation']
 
     # Code that generates a pickle with useful data to analyze.
     # The outpul will be used to compute ROCs, AUCs and EERs.
@@ -188,14 +189,14 @@ def main(config_dict):
         labels              = trans_dict[utterance]["labels"]
         trans_zero          = trans_dict[utterance]["best_ref_auto_zero"]
 
-        df = match_labels2gop(utterance, trans_zero, annot_manual, annot_kaldi, labels, gop_scores)
+        df_phone = match_labels2gop(utterance, trans_zero, annot_manual, annot_kaldi, labels, gop_scores)
         
         #df = match_labels2gop_syllabic(df_phone)
-        #if eval_by_syl:
-            #df = match_labels2gop_syllabic(df_phone)
-        #else: 
-        #    df = df_phone
-        
+        if evaluation == 'syl':
+            df = match_labels2gop_syllabic(df_phone)
+        else: 
+            df = df_phone
+    
         output.append(df)
 
 

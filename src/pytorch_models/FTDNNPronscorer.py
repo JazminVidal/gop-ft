@@ -5,6 +5,7 @@ from IPython import embed
 from src.pytorch_models.FTDNN import FTDNN
 
 def summarize_outputs_per_phone(outputs, batch_target_phones, batch_cum_matrix): 
+    
     masked_outputs = outputs*abs(batch_target_phones)
     summarized_outputs = torch.matmul(batch_cum_matrix, masked_outputs)
     frame_counts = torch.matmul(batch_cum_matrix, batch_target_phones)
@@ -12,16 +13,6 @@ def summarize_outputs_per_phone(outputs, batch_target_phones, batch_cum_matrix):
     by_phone_outputs = torch.div(summarized_outputs, frame_counts)
 
     return by_phone_outputs
-
-def forward_by_phone(outputs, batch_target_phones, batch_cum_matrix): 
-    masked_outputs    = outputs*abs(batch_target_phones)
-    summarized_outputs = torch.matmul(batch_cum_matrix, masked_outputs)
-    frame_counts = torch.matmul(batch_cum_matrix, batch_target_phones)
-    frame_counts[frame_counts==0]=1
-    phone_outputs = torch.div(summarized_outputs, frame_counts)
-    phone_outputs = torch.sum(phone_outputs, dim=2)
-
-    return phone_outputs
 
 class OutputLayer(nn.Module):
 
@@ -57,7 +48,7 @@ class FTDNNPronscorer(nn.Module):
         self.ftdnn        = FTDNN(batchnorm=batchnorm, dropout_p=dropout_p, device_name=device_name)
         self.output_layer = OutputLayer(256, out_dim, use_bn=use_final_bn)
         
-    def forward(self, x, loss_per_phone, evaluation, batch_target_phones, batch_cum_matrix):
+    def forward(self, x, loss_per_phone, eval, batch_target_phones, batch_cum_matrix):
         '''
         Input must be (batch_size, seq_len, in_dim)
         '''
@@ -69,7 +60,8 @@ class FTDNNPronscorer(nn.Module):
             
             x = summarize_outputs_per_phone(x, batch_target_phones, batch_cum_matrix)
         
-        if evaluation:
-            x = forward_by_phone(x, batch_target_phones, batch_cum_matrix)
-    
+        if eval:
+            x = summarize_outputs_per_phone(x, batch_target_phones, batch_cum_matrix)
+            x = torch.sum(x, dim=2)
+
         return x

@@ -18,9 +18,8 @@ def removeSymbols(str, symbols):
 def generate_scores_for_testset(model, testloader):
     print('Generating scores for testset')
     
-    evaluation = True
+    eval = True
     loss_per_phone = False 
-    #summarize = False
   
     scores = {}
     for i, batch in enumerate(testloader, 0):       
@@ -33,7 +32,7 @@ def generate_scores_for_testset(model, testloader):
         batch_cum_matrix = unpack_cum_matrix_from_batch(batch)
 
     
-        outputs = (-1) * model(features, loss_per_phone, evaluation, 
+        outputs = (-1) * model(features, loss_per_phone, eval, 
                                 batch_target_phones, batch_cum_matrix)
 
     
@@ -75,6 +74,7 @@ def main(config_dict):
     conf_path           = config_dict['features-conf-path']
     device_name         = config_dict['device']
     batchnorm           = config_dict['batchnorm']
+
 
 
     testset = EpaDB(sample_list, phone_list_path, labels_dir, features_path, conf_path)
