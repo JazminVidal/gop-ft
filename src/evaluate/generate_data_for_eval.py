@@ -49,7 +49,6 @@ def get_gop_alignments(path_filename, phone_int2sym_dict):
 
     output = []
     print(path_filename)
-#    embed()
     for line in open(path_filename).readlines():
         print(line)
         l=line.split()

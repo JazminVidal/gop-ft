@@ -4,6 +4,16 @@ import torch.nn.functional as F
 from IPython import embed
 from src.pytorch_models.FTDNN import FTDNN
 
+
+
+def summarize_outputs_per_phone_gop(outputs, batch_target_phones, batch_cum_matrix): 
+    outputs = -torch.logaddexp(torch.zeros(outputs.shape[0], outputs.shape[1], outputs.shape[2]),-outputs)
+    by_phone_outputs = summarize_outputs_per_phone(outputs, batch_target_phones, batch_cum_matrix)
+    p_outputs = torch.exp(by_phone_outputs) 
+    odds_denominator = torch.ones(p_outputs.shape[0], p_outputs.shape[1], p_outputs.shape[2])-p_outputs
+    logodds_outputs = torch.div(p_outputs, odds_denominator)
+    return logodds_outputs
+
 def summarize_outputs_per_phone(outputs, batch_target_phones, batch_cum_matrix): 
     
     masked_outputs = outputs*abs(batch_target_phones)
@@ -48,19 +58,25 @@ class FTDNNPronscorer(nn.Module):
         self.ftdnn        = FTDNN(batchnorm=batchnorm, dropout_p=dropout_p, device_name=device_name)
         self.output_layer = OutputLayer(256, out_dim, use_bn=use_final_bn)
         
-    def forward(self, x, loss_per_phone, eval, batch_target_phones, batch_cum_matrix):
+    def forward(self, x, loss_per_phone, summarize, eval, batch_target_phones, batch_cum_matrix):
         '''
         Input must be (batch_size, seq_len, in_dim)
         '''
         x = self.ftdnn(x)
         x = self.output_layer(x)
-        #log_post = -torch.logaddexp(0,-x) #ver como se llama en torch. 
+         
 
-        if loss_per_phone: 
-            
-            x = summarize_outputs_per_phone(x, batch_target_phones, batch_cum_matrix)
+        if loss_per_phone:
+
+            if summarize == 'gop':
+                x = summarize_outputs_per_phone_gop(x, batch_target_phones, batch_cum_matrix)
+            else: 
+                x = summarize_outputs_per_phone(x, batch_target_phones, batch_cum_matrix)
         
         if eval:
+            #if summarize == 'gop':
+
+            x = -torch.logaddexp(torch.zeros(x.shape[0], x.shape[1], x.shape[2]),-x)
             x = summarize_outputs_per_phone(x, batch_target_phones, batch_cum_matrix)
             x = torch.sum(x, dim=2)
 

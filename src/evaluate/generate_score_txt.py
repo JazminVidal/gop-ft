@@ -15,7 +15,7 @@ def removeSymbols(str, symbols):
         str = str.replace(symbol,'')
     return str
 
-def generate_scores_for_testset(model, testloader):
+def generate_scores_for_testset(model, testloader, summarize):
     print('Generating scores for testset')
     
     eval = True
@@ -32,16 +32,19 @@ def generate_scores_for_testset(model, testloader):
         batch_cum_matrix = unpack_cum_matrix_from_batch(batch)
 
     
-        outputs = (-1) * model(features, loss_per_phone, eval, 
+        outputs = (-1) * model(features, loss_per_phone, summarize, eval, 
                                 batch_target_phones, batch_cum_matrix)
 
     
         
         for j, logid in enumerate(logids, 0):
-          
+            
+            #if logid == 'spkr109_1':
+            #    embed()
+            
             p = batch_transcripts[j].detach().numpy()
             o = outputs[j].detach().numpy()
-            scores[logid] = [o[o!=0], p[p!=0]]
+            scores[logid] = [o[p!=0], p[p!=0]]
         
     return scores
 
@@ -74,6 +77,7 @@ def main(config_dict):
     conf_path           = config_dict['features-conf-path']
     device_name         = config_dict['device']
     batchnorm           = config_dict['batchnorm']
+    summarize           = config_dict['summarize']
 
 
 
@@ -94,7 +98,7 @@ def main(config_dict):
 
     phone_dict = testset._phone_sym2int_dict
     
-    scores = generate_scores_for_testset(model, testloader)
+    scores = generate_scores_for_testset(model, testloader, summarize)
     score_log_fh = open(gop_txt_dir+ '/' + gop_txt_name, 'w+')
     log_testset_scores_to_txt(scores, score_log_fh)
 
