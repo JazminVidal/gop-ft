@@ -153,7 +153,7 @@ def calculate_loss(outputs, mask, labels, phone_weights=None, norm_per_phone_and
             weights[:,:,frame_count<min_frame_count] = 0.0
 
     loss_fn = torch.nn.BCEWithLogitsLoss(reduction='none', weight=weights)
-
+    
     return loss_fn(outputs, labels), torch.sum(weights)
 
 
@@ -189,6 +189,7 @@ def criterion_fast(batch_outputs, batch_labels, weights=None, norm_per_phone_and
 
 
 def start_from_checkpoint(PATH, model, optimizer, scheduler):
+    
     checkpoint = torch.load(PATH)
     model.load_state_dict(checkpoint['model_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -255,7 +256,7 @@ def foward_backward_pass(data, model, optimizer, phone_weights, phone_int2sym, p
 
     return loss
 
-def log_loss_if_first_batch(epoch, i, fold, loss, model, testloader, step, summarize):
+def log_loss_if_first_batch(epoch, i, fold, loss, model, testloader, step,loss_per_phone, summarize):
     if epoch == 0 and i == 0:
         wandb.log({'train_loss_fold_' + str(fold): loss, 'step' : step})
         test_loss, test_loss_dict = test(model, testloader, loss_per_phone, summarize)

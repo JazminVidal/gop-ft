@@ -176,7 +176,7 @@ def main(config_dict):
 
     utterance_list = generate_utterance_list_from_path(utterance_list_path) 
     trans_dict = get_reference_from_system_alignments(reference_transcriptions_path, labels_dir_path, gop_alignments, utterance_list)
- 
+    
     # Now, iterate over utterances
     output = []
     for utterance in utterance_list:

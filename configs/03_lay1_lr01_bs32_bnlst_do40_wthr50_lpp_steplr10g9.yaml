@@ -13,6 +13,8 @@
   batchnorm:                "last"
   norm-per-phone-and-class: false
   loss-per-phone:           true
+  summarize:                "m_logpost" 
+  evaluation:               "phone"
   use-clipping:             false
   use-multi-process:        false
   phones-list-path:         "phones/kaldi/phones-list.txt"
