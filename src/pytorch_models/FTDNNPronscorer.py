@@ -10,6 +10,7 @@ def summarize_outputs_per_phone(outputs, batch_target_phones, batch_cum_matrix, 
     
     if summarize == "m_logpost":
         # Calcula log posteriors por frame
+       
         zeros = torch.zeros(outputs.shape[0], outputs.shape[1], outputs.shape[2], device='cuda:0')
         if eval:
             zeros = zeros.cpu()
@@ -33,6 +34,7 @@ def summarize_outputs_per_phone(outputs, batch_target_phones, batch_cum_matrix, 
 
 
     if summarize != "min":
+        
         summarized_outputs = torch.matmul(batch_cum_matrix, masked_outputs)
         frame_counts = torch.matmul(batch_cum_matrix, batch_target_phones)
         frame_counts[frame_counts==0]=1
@@ -40,10 +42,13 @@ def summarize_outputs_per_phone(outputs, batch_target_phones, batch_cum_matrix, 
 
     
     if summarize == "m_logpost":
+       
         # Volves a logits - Esto en el caso de evaluación a mi no me cierra, a Luciana si. 
         # Lo tengo que ver de nuevo. 
         eps = 1e-12
-        by_phone_outputs = by_phone_outputs - torch.log((-torch.special.expm1(by_phone_outputs))+eps)
+        logit_denom = torch.log((-torch.special.expm1(by_phone_outputs))+eps)
+        logit_denom_mask = logit_denom*abs((torch.sign(by_phone_outputs)))
+        by_phone_outputs = by_phone_outputs - logit_denom_mask
 
     return by_phone_outputs
 
