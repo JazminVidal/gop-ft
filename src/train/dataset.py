@@ -46,7 +46,8 @@ class EpaDB(Dataset):
         labels_path: Union[str, Path],
         features_path : Union[str, Path],
         conf_path: Union[str, Path],
-        audio_ext=".wav"
+        audio_ext=".wav",
+        app=False
     ) -> None:
         self._ext_audio = audio_ext
 
@@ -70,6 +71,8 @@ class EpaDB(Dataset):
         #Create dictionary to turn +/- labels into 1/-1
         self._label_dict = {'+' : 1,
                             '-' : 0}
+
+        self.app        = app
             
 
     def _load_epa_item(self, file_id: str, labels_path: str) -> Tuple[Tensor, str, str, str, List[Tuple[str, str, str, int, int]]]:
@@ -141,15 +144,20 @@ class EpaDB(Dataset):
                     #If the phone was mispronounced, put a -1 in the labels
                     #If the phone was pronounced correcly, put a 1 in the labels
                     #(If start_time == end_time we cant assign a label)
-                    if start_time != end_time and label == '+':
-                        pos_labels[start_time:end_time, target_node] = 1
-                        labels[start_time:end_time, target_node] = 1                        
-                        ids[start_time:end_time, target_node] = 1
 
-                    if start_time != end_time and label == '-':
-                        neg_labels[start_time:end_time, target_node] = 0
-                        labels[start_time:end_time, target_node] = -1
-                        ids[start_time:end_time, target_node] = 1
+                    if self.app:
+                        if start_time != end_time:
+                            ids[start_time:end_time, target_node] = 1
+                    else:
+                        if start_time != end_time and label == '+':
+                            pos_labels[start_time:end_time, target_node] = 1
+                            labels[start_time:end_time, target_node] = 1                        
+                            ids[start_time:end_time, target_node] = 1
+
+                        if start_time != end_time and label == '-':
+                            neg_labels[start_time:end_time, target_node] = 0
+                            labels[start_time:end_time, target_node] = -1
+                            ids[start_time:end_time, target_node] = 1
 
                 except ValueError as e:
                     print("Bad item:")

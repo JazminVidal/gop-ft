@@ -79,9 +79,10 @@ def main(config_dict):
     batchnorm           = config_dict['batchnorm']
     summarize           = config_dict['summarize']
 
+    app                 = config_dict['app']
 
 
-    testset = EpaDB(sample_list, phone_list_path, labels_dir, features_path, conf_path)
+    testset = EpaDB(sample_list, phone_list_path, labels_dir, features_path, conf_path, app=app)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
                                           shuffle=False, num_workers=0, collate_fn=collate_fn_padd)
 
@@ -93,8 +94,13 @@ def main(config_dict):
         model = AveragedModel(model)
     
     model.eval()
-    state_dict = torch.load(state_dict_dir + '/' + model_name + '.pth')
-    model.load_state_dict(state_dict['model_state_dict'])
+    
+    if app:
+        state_dict = torch.load(state_dict_dir + '/' + model_name)
+        model.load_state_dict(state_dict)
+    else:
+        state_dict = torch.load(state_dict_dir + '/' + model_name + '.pth')
+        model.load_state_dict(state_dict['model_state_dict'])
 
     phone_dict = testset._phone_sym2int_dict
     
@@ -102,3 +108,6 @@ def main(config_dict):
     score_log_fh = open(gop_txt_dir+ '/' + gop_txt_name, 'w+')
     log_testset_scores_to_txt(scores, score_log_fh)
 
+
+    if app:
+        return scores

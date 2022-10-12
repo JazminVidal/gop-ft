@@ -22,22 +22,28 @@ class FeatureManager:
 
 
 
-	def extract_features_using_kaldi(self):
+	def extract_features_using_kaldi(self, wavs_path_list = None):
 
 		if not os.path.isdir(self.features_path):
 			os.mkdir(self.features_path)
+
+
+		#Two methods: files on folder or list of wavs 
+		if wavs_path_list == None:
+			epadb_glob = glob.glob(self.epadb_root_path + '/*/waveforms/*')
+			heldout_glob = []
+			if self.heldout_root_path != '':
+				heldout_glob = glob.glob(self.heldout_root_path + '/*/waveforms/*')
+			files = epadb_glob + heldout_glob
+		else:
+			files = np.array([l.replace('\n', '').strip() for l in open(wavs_path_list).readlines() if not l.startswith("#")])
 
 		wav_scp_file = open(self.wav_scp_path,"w+")
 		spk2utt_file = open(self.spk2utt_path,"w+")
 
 		#Iterate over waveforms and write their names in wav.scp and spk2utt
-		#Also, create text file with transcriptions of all phrases
-		epadb_glob = glob.glob(self.epadb_root_path + '/*/waveforms/*')
-		heldout_glob = []
-		if self.heldout_root_path != '':
-			heldout_glob = glob.glob(self.heldout_root_path + '/*/waveforms/*')
-		
-		for file in epadb_glob + heldout_glob:
+		#Also, create text file with transcriptions of all phrases		
+		for file in files:
 			fullpath = os.path.abspath(file)
 			logid = os.path.splitext(os.path.basename(file))[0]
 			wav_scp_file.write(logid + ' ' + fullpath + '\n')
@@ -104,9 +110,14 @@ class FeatureManager:
 		ivector_period = int(ivector_period_line.split('=')[1])
 		return ivector_period
 
-	def get_transcription_for_logid(self, logid):
+	def get_transcription_for_logid(self, logid, transcription_list = None):
 		spkr = logid.split('_')[0]
-		transcription_path = self.epadb_root_path + '/' + spkr + '/transcriptions/' + logid +'.lab'
+
+		if transcription_list == None:
+			transcription_path = self.epadb_root_path + '/' + spkr + '/transcriptions/' + logid +'.lab'
+		else:
+			transcription_path = transcription_list  + logid +'.lab'
+
 
 		if not os.path.isfile(transcription_path):
 			raise Exception("Transcription file for logid " + logid + " not found in path " + transcription_path + ".")
@@ -114,3 +125,4 @@ class FeatureManager:
 		with open(transcription_path, 'r') as transcription_fh:
 			transcription = transcription_fh.readlines()[0]
 		return transcription
+

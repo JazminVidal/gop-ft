@@ -96,7 +96,12 @@ def add_data_keys_to_config_dict(config_dict, setup):
 	config_dict["train-list-path"]       = data_path + "/epadb_full_path_list.txt"
 	config_dict["test-list-path"]        = data_path + "/heldout_full_path_list.txt"
 	config_dict["reference-trans-path"]  = data_path + "/reference_transcriptions.txt"
+    
         
+	config_dict["wavs_list"]             = None
+	config_dict['logid']				 = None
+	config_dict['trans-path']			 = None
+
 
 	return config_dict
 

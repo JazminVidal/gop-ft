@@ -60,3 +60,33 @@ class GopConfig():
         else:
             config_dict["utterance-list-path"] = config_dict["train-list-path"]
         self.config_dict = config_dict
+
+
+class AppConfig():
+    def __init__(self, config_yaml, spkr_wav_list, wavs_list, name_set):
+        config_fh   = open(config_yaml, "r")
+        config_dict = yaml.safe_load(config_fh)
+
+        data_path                            = config_dict["output-dir"]
+        config_dict["alignments-dir-path"]   = data_path + "alignments/"
+        config_dict["alignments-path"]       = config_dict["alignments-dir-path"] + "align_output_"+name_set
+        config_dict["loglikes-path"]         = config_dict["alignments-dir-path"] + "loglikes_"+name_set+".ark"
+        config_dict["features-conf-path"]    = data_path + "features/conf"
+        config_dict["features-path"]         = data_path + "features/"+name_set
+        config_dict["auto-labels-dir-path"]  = data_path + "kaldi_labels/"
+        config_dict["train-list-path"]       = data_path + "/" + spkr_wav_list
+        config_dict["test-list-path"]        = data_path + "/" + spkr_wav_list
+        config_dict["utterance-list-path"]   = config_dict["test-list-path"]
+        config_dict["wavs_list"]             = data_path + "/" + wavs_list
+        config_dict["name_set"]              = name_set
+        config_dict["gop-scores-dir"]        = data_path    + "gop_scores/"   
+        config_dict["phone-count"]           = get_phone_count(config_dict["phones-list-path"])
+        config_dict["state-dict-dir"]        = "pytorch_models/"
+        config_dict["finetune-model-path"]   = config_dict["pronscoring-model-path"]  
+        config_dict['batchnorm']             = "last"
+        config_dict["ref-labels-dir-path"]   = config_dict["data-root-path"]
+        config_dict["model-name"]            = config_dict["pronscoring-model-path"].split("/")[-1] 
+        config_dict["utterance-list-path"]   = config_dict["test-list-path"]
+        config_dict["gop-txt-name"]          = 'gop-'+config_dict["model-name"]+'-'+name_set+'.txt'
+
+        self.config_dict = config_dict

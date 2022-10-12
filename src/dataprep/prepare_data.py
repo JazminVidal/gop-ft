@@ -105,6 +105,10 @@ def main(config_dict):
     reference_path          = config_dict['reference-trans-path']
     dataprep_output_path    = config_dict['output-dir']
 
+    app                     = config_dict['app']
+    wavs_list               = config_dict['wavs_list']
+
+
     #Download librispeech models and extract them into librispeech-models-path
     download_librispeech_models(librispeech_models_path)
 
@@ -113,10 +117,11 @@ def main(config_dict):
 
     #Extract features
     feature_manager = FeatureManager(data_root_path, features_path, conf_path)
-    feature_manager.extract_features_using_kaldi()
+    feature_manager.extract_features_using_kaldi(wavs_list)
 
-    #Create links to utterance lists in data folder
-    copy_sample_lists_and_reference(train_list_path, test_list_path, reference_path, dataprep_output_path)
+    if not app:        
+        #Create links to utterance lists in data folder
+        copy_sample_lists_and_reference(train_list_path, test_list_path, reference_path, dataprep_output_path)
 
 
 

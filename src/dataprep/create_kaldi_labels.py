@@ -128,16 +128,26 @@ def main(config_dict):
     labels_dir_path               = config_dict['ref-labels-dir-path']
     align_path                    = config_dict['alignments-path']
     output_dir_path               = config_dict['auto-labels-dir-path']
+    app                           = config_dict['app']
+
 
     kaldi_alignments = get_kaldi_alignments(align_path)
     utterance_list = generate_utterance_list_from_path(utterance_list_path) 
-    trans_dict = get_reference_from_system_alignments(reference_transcriptions_path, labels_dir_path, kaldi_alignments, utterance_list)
+ 
+    if not app:
+        trans_dict = get_reference_from_system_alignments(reference_transcriptions_path, labels_dir_path, kaldi_alignments, utterance_list)
 
     for utterance in utterance_list:
         spk, sent = utterance.split("_")
 
         start_times, end_times = get_times(kaldi_alignments, utterance)
-        target_column, trans_manual, labels, start_times, end_times = match_trans_lengths(trans_dict[utterance], start_times, end_times)       
+
+        if app:
+            target_column = kaldi_alignments.loc()[utterance].phones
+            trans_manual  = target_column
+            labels        = np.zeros(len(target_column))
+        else:
+            target_column, trans_manual, labels, start_times, end_times = match_trans_lengths(trans_dict[utterance], start_times, end_times)       
 
 
         #outdir  = "%s/labels_with_kaldi_phones/%s/labels" % (args.output_dir_path, spk)
