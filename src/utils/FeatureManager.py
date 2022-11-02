@@ -54,6 +54,7 @@ class FeatureManager:
 		spk2utt_file.close()
 
 
+
 		if not os.path.exists(self.mfcc_path):
 			os.system('compute-mfcc-feats --config='+self.conf_path+'/mfcc_hires.conf \
 					   scp,p:' + self.wav_scp_path+' ark:- | copy-feats \
@@ -110,10 +111,9 @@ class FeatureManager:
 		ivector_period = int(ivector_period_line.split('=')[1])
 		return ivector_period
 
-	def get_transcription_for_logid(self, logid, transcription_list = None):
+	def get_transcription_for_logid(self, logid, transcription_list = "None"):
 		spkr = logid.split('_')[0]
-
-		if transcription_list == None:
+		if transcription_list == "None":
 			transcription_path = self.epadb_root_path + '/' + spkr + '/transcriptions/' + logid +'.lab'
 		else:
 			transcription_path = transcription_list  + logid +'.lab'
