@@ -10,7 +10,7 @@ def summarize_outputs_per_phone(outputs, batch_target_phones, batch_cum_matrix, 
     
     if summarize == "m_logpost":
         # Calcula log posteriors por frame
-       
+        
         zeros = torch.zeros(outputs.shape[0], outputs.shape[1], outputs.shape[2], device='cuda:0')
         if eval:
             zeros = zeros.cpu()
@@ -19,6 +19,8 @@ def summarize_outputs_per_phone(outputs, batch_target_phones, batch_cum_matrix, 
     masked_outputs = outputs*abs(batch_target_phones)
 
     if summarize == "min":
+        # Esto me da el máximo y quiero el mínimo. 
+        # para eso le paso -x a la softmax, o sea, le paso -outputs. 
         M = torch.exp(masked_outputs)
         M_masked = M*abs(batch_target_phones)
         N = torch.matmul(batch_cum_matrix, M_masked)
@@ -29,22 +31,21 @@ def summarize_outputs_per_phone(outputs, batch_target_phones, batch_cum_matrix, 
         xpnd_cumm_N_vec = cumm_N_vec.unsqueeze(2).repeat(1,1,39)
         xpnd_cumm_N_vec[xpnd_cumm_N_vec==0]=1
         S = torch.div(M_masked,xpnd_cumm_N_vec)
-        masked_outputs = 1-(S*masked_outputs) # para tener el mínimo.
+        masked_outputs = S*masked_outputs 
         by_phone_outputs = torch.matmul(batch_cum_matrix, masked_outputs)
 
 
     if summarize != "min":
-        
+        print('haciendo resumen por fono matricial')
         summarized_outputs = torch.matmul(batch_cum_matrix, masked_outputs)
         frame_counts = torch.matmul(batch_cum_matrix, batch_target_phones)
         frame_counts[frame_counts==0]=1
         by_phone_outputs = torch.div(summarized_outputs, frame_counts)
-
+        #embed()
     
     if summarize == "m_logpost":
        
-        # Volves a logits - Esto en el caso de evaluación a mi no me cierra, a Luciana si. 
-        # Lo tengo que ver de nuevo. 
+        # Volves a logits - La escala, nena 
         eps = 1e-12
         logit_denom = torch.log((-torch.special.expm1(by_phone_outputs))+eps)
         logit_denom_mask = logit_denom*abs((torch.sign(by_phone_outputs)))
@@ -69,8 +70,9 @@ class OutputLayer(nn.Module):
     def forward(self, x):
         if self.use_bn:
             x = x.transpose(1,2)
-            x =self.bn(x).transpose(1,2)
-        x = self.linear(x)
+            x =self.bn(x.float()).transpose(1,2)
+        #x = self.linear(x.double())
+        x = self.linear(x.float())
         return x
 
 class FTDNNPronscorer(nn.Module):
@@ -83,22 +85,38 @@ class FTDNNPronscorer(nn.Module):
         if batchnorm in ["final", "last", "firstlast"]:
             use_final_bn=True
         
-        self.ftdnn        = FTDNN(batchnorm=batchnorm, dropout_p=dropout_p, device_name=device_name)
-        self.output_layer = OutputLayer(256, out_dim, use_bn=use_final_bn)
+         
+        self.ftdnn = FTDNN(batchnorm=batchnorm, dropout_p=dropout_p, device_name=device_name)
+        # En esta version que quiere encodear la duración, la capa de salida tiene un nodo más que 
+        # en la versión original. Este nodo sirve para aprender la duración. 
+        # En este punto se inicializa random como todos los demás nodos.
+        self.output_layer = OutputLayer(257, out_dim, use_bn=use_final_bn)
         
         
     def forward(self, x, loss_per_phone, summarize, eval, batch_target_phones, batch_cum_matrix):
         '''
         Input must be (batch_size, seq_len, in_dim)
         '''
-        x = self.ftdnn(x)
-        # nuevo x que sea la concatencacion de x con batch_target phones
-        # cambiar el output layer a out_dim=1 
-        # el forward da una proba por frame
-        # las etiquetas son el equivalente a batch target phones colapsado porque tengo una etiqueta por frame. 
-        # el resumen se hace antes de la loss. 
-        x = self.output_layer(x)
+        # a partir de la cum mtrix tengo que calcular la duracion para cada instancia de fono o a partir de batch_target phones
 
+        x = self.ftdnn(x)
+        # Resumen: obtengo a partir de la cummulative matrix la cantidad de 
+        # frames que dura cada fono y le asigno esa duración a cada frame que compone ese fono. 
+        n_frames_by_phone = torch.sum(batch_cum_matrix, dim=2)
+        xpnd_n_frames_by_phone =  n_frames_by_phone.unsqueeze(2).repeat(1,1,batch_cum_matrix.shape[2])
+        mask_n_frames = batch_cum_matrix*xpnd_n_frames_by_phone
+        n_frames_by_phone_2frame = torch.sum(mask_n_frames, dim=1).unsqueeze_(-1)
+        # aca tengo que concatenar la x con la duración a nivel frame 
+        # lo que voy a hacer en realidad es reemplazar. 
+        x = x[:, :, 1:]
+
+        #n_frames_by_phone_2frame antes de meterlo ahí es algo que se manda a una red. 
+        # pasarlo por un self.tdnn2 de dos capas chicas 
+        x = torch.cat((x, n_frames_by_phone_2frame), -1)
+        
+        x = self.output_layer(x)
+        print('output del forward')
+        #embed()
         # se puede llamar score_per_phone 
         if loss_per_phone or eval:
             x = summarize_outputs_per_phone(x, batch_target_phones, batch_cum_matrix, summarize, eval)

@@ -202,12 +202,11 @@ def main(config_dict):
 
 	print(state_dict['output_layer.linear3.weight'])
 
-
 	for name, param in ftdnn.named_parameters():
 		print (name, param.shape)
 
 	chain_file.close() 
-
+    
 	ftdnn.load_state_dict(state_dict)
 
 	torch.save(ftdnn.state_dict(), output_path)

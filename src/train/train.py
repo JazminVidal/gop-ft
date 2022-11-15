@@ -427,7 +427,7 @@ def main(config_dict):
     phone_count = trainset.phone_count()
 
     #Get acoustic model to train
-    model = FTDNNPronscorer(out_dim=phone_count, batchnorm=batchnorm, dropout_p=dropout_p, device_name=device_name) 
+    model = FTDNNPronscorer(out_dim=phone_count, batchnorm=batchnorm, dropout_p=dropout_p, device_name=device_name).double()
     model.to(device)
     state_dict = torch.load(get_model_path_for_fold(model_path, fold, layer_amount))
     model.load_state_dict(state_dict['model_state_dict'])

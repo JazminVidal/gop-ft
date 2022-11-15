@@ -36,6 +36,7 @@ def generate_scores_for_testset(model, testloader, summarize):
                                 batch_target_phones, batch_cum_matrix)
 
     
+        
         for j, logid in enumerate(logids, 0):
             
             #if logid == 'spkr109_1':
@@ -87,14 +88,15 @@ def main(config_dict):
     phone_count = testset.phone_count()
 
     #Get pronscoring model to test
-    # model.double()
-    model = FTDNNPronscorer(out_dim=phone_count, device_name=device_name, batchnorm=batchnorm).float()
+    model = FTDNNPronscorer(out_dim=phone_count, device_name=device_name, batchnorm=batchnorm).double()
     if model_name.split("_")[-1] == "swa":
         model = AveragedModel(model)
     
     model.eval()
     state_dict = torch.load(state_dict_dir + '/' + model_name + '.pth')
     model.load_state_dict(state_dict['model_state_dict'])
+
+    phone_dict = testset._phone_sym2int_dict
     
     scores = generate_scores_for_testset(model, testloader, summarize)
     score_log_fh = open(gop_txt_dir+ '/' + gop_txt_name, 'w+')

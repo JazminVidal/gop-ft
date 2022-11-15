@@ -88,7 +88,7 @@ def read_relu_component(file, layer_number, is_tdnnf=True):
 def main(config_dict):
 	global line
 	global chain_file
-
+    
 	chain_file  = config_dict["libri-chain-txt-path"]
 	output_path = config_dict["finetune-model-path"]
 	phone_count = config_dict["phone-count"]
@@ -147,7 +147,11 @@ def main(config_dict):
 		if '<ComponentName> prefinal-l' in line:
 			components['prefinal-l'] = {}
 			components['prefinal-l']['linear_params'] = read_linear_params(chain_file)
-		
+			min_val = (components['prefinal-l']['linear_params']).min()
+			max_val = (components['prefinal-l']['linear_params']).max()
+			new_dim = np.random.uniform(low=min_val, high=max_val, size=(1,1536))
+			components['prefinal-l']['linear_params'] = np.vstack((components['prefinal-l']['linear_params'], new_dim))
+		    
 		# The code used to parse the chain head parameters has been removed because a new layer will be used instead.
 
 
@@ -175,15 +179,15 @@ def main(config_dict):
 		model_state_dict['ftdnn.layer'+ str("{:02d}".format(layer_number)) +'.bn.running_var'] = torch.from_numpy(components['tdnnf'+ str(layer_number) +'.batchnorm']['stats_var'])
 
 	model_state_dict['ftdnn.layer18.weight'] = torch.from_numpy(components['prefinal-l']['linear_params'])
-
+	
 	
 	#Add layer to finetune 
 	torch.manual_seed(seed)
-	model_state_dict['output_layer.linear.weight']   = torch.randn([phone_count, 256])
+	model_state_dict['output_layer.linear.weight']   = torch.randn([phone_count, 257])
 	model_state_dict['output_layer.linear.bias']     = torch.randn([phone_count])
 	if batchnorm in ["final", "last", "firstlast"]:
-		model_state_dict['output_layer.bn.running_mean'] = torch.zeros(256)
-		model_state_dict['output_layer.bn.running_var']  = torch.ones(256)
+		model_state_dict['output_layer.bn.running_mean'] = torch.zeros(257)
+		model_state_dict['output_layer.bn.running_var']  = torch.ones(257)
 
 	torch.nn.init.xavier_uniform(ftdnn.output_layer.linear.weight)
 
@@ -191,10 +195,10 @@ def main(config_dict):
 		print (name, param.shape)
 
 	chain_file.close() 
-
+	
 	state_dict = {}
 	state_dict['model_state_dict'] = model_state_dict
-
 	ftdnn.load_state_dict(model_state_dict)
+	
 
 	torch.save(state_dict, output_path)

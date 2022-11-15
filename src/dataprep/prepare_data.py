@@ -39,6 +39,7 @@ def prepare_pytorch_models(pytorch_models_path, libri_chain_mdl_path, libri_chai
         makedirs_for_file(acoustic_model_path)
         config_dict = {"libri-chain-txt-path": libri_chain_txt_path,
                        "acoustic-model-path":  acoustic_model_path}
+        
         convert_chain_to_pytorch.main(config_dict)
 
 def create_epadb_full_sample_list(data_root_path, utterance_list_path):

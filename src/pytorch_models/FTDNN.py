@@ -78,7 +78,8 @@ class InputLayer(nn.Module):
         context_first = torch.cat([padding_first, mfccs[:,:-1,:]], axis=1)
         context_last = torch.cat([mfccs[:,1:,:], padding_last], axis=1)
         x = torch.cat([context_first, mfccs, context_last, ivectors], axis=2)
-        x = self.lda(x)
+        #x = self.lda(x.double())
+        x = self.lda(x.float())
         x = self.kernel(x)
         x = self.nonlinearity(x)
 
@@ -116,7 +117,7 @@ class FTDNN(nn.Module):
         self.layer15 = FTDNNLayer(3072, 160, 320, 1536, 3, dropout_p=dropout_p, device=device_name)
         self.layer16 = FTDNNLayer(3072, 160, 320, 1536, 3, dropout_p=dropout_p, device=device_name)
         self.layer17 = FTDNNLayer(3072, 160, 320, 1536, 3, dropout_p=dropout_p, device=device_name)
-        self.layer18 = nn.Linear(1536, 256, bias=False) #This is the prefinal-l layer
+        self.layer18 = nn.Linear(1536, 257, bias=False) #This is the prefinal-l layer
         
     def forward(self, x):
 
