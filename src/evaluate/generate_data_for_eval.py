@@ -121,6 +121,9 @@ def match_labels2gop(logid, trans_zero, trans_manual, trans_auto, labels, gop_sc
     df = pd.DataFrame(rows, columns=columns)
     return df
 
+
+
+
 def match_labels2gop_syllabic(df):
     phones = list(df.phone_automatic)
     labels = list(df.label)
@@ -158,7 +161,7 @@ def get_reference(file):
     return reference, annot_manual, labels
 
 
-def main(config_dict):
+def main(config_dict, path_output_log):
     reference_transcriptions_path = config_dict['reference-trans-path']
     utterance_list_path           = config_dict['utterance-list-path']
     output_dir                    = config_dict['eval-dir']
@@ -167,19 +170,27 @@ def main(config_dict):
     phones_list_path              = config_dict['phones-list-path']
     labels_dir_path               = config_dict['auto-labels-dir-path']
     evaluation                    = config_dict['evaluation']
-
+    app                           = config_dict['app']
+    #path_output_log               = config_dict['path_output_log']
     # Code that generates a pickle with useful data to analyze.
     # The outpul will be used to compute ROCs, AUCs and EERs.
     #eval_by_syl = True
+
+    
     _, phone_int2sym_dict, _ = get_phone_dictionaries(phones_list_path)
     gop_alignments = get_gop_alignments(gop_path, phone_int2sym_dict)
 
     utterance_list = generate_utterance_list_from_path(utterance_list_path) 
-    trans_dict = get_reference_from_system_alignments(reference_transcriptions_path, labels_dir_path, gop_alignments, utterance_list)
+    
+
+    
+    trans_dict = get_reference_from_system_alignments(reference_transcriptions_path, labels_dir_path, gop_alignments, utterance_list, path_output_log)
+
     
     # Now, iterate over utterances
     output = []
     for utterance in utterance_list:
+        
         gop_scores = gop_alignments.loc[utterance].gops
 
         annot_manual        = trans_dict[utterance]["trans_manual"]
@@ -205,4 +216,7 @@ def main(config_dict):
 
     joblib.dump(df_trans_match, output_dir + output_filename)
 
-
+    if app:
+        return  df_trans_match, trans_dict
+    else:
+        return df_trans_match
