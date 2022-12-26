@@ -87,6 +87,33 @@ class AppConfig():
         config_dict["ref-labels-dir-path"]   = config_dict["data-root-path"]
         config_dict["model-name"]            = config_dict["pronscoring-model-path"].split("/")[-1] 
         config_dict["utterance-list-path"]   = config_dict["test-list-path"]
-        config_dict["gop-txt-name"]          = 'gop-'+config_dict["model-name"]+'-'+name_set+'.txt'
+        config_dict["gop-txt-name"]          = 'gop-'+config_dict["model-name"]+'-'+name_set+'.txt'  
+        config_dict['full-gop-score-path']   = config_dict["gop-scores-dir"] + config_dict["gop-txt-name"]
+        config_dict['evaluation']            = ""
+        config_dict["eval-filename"]         = 'data_for_eval-'+config_dict["model-name"]+'-'+name_set+'.pickle'  
+        
 
         self.config_dict = config_dict
+
+
+class AppGopConfig():
+    def __init__(self, config_yaml, spkr_wav_list, wavs_list, name_set):
+        config_fh   = open(config_yaml, "r")
+        config_dict = yaml.safe_load(config_fh)
+
+
+        data_path                            = config_dict["output-dir"]
+        config_dict["alignments-dir-path"]   = data_path + "alignments/"
+        config_dict["alignments-path"]       = config_dict["alignments-dir-path"] + "align_output_"+name_set
+        config_dict["loglikes-path"]         = config_dict["alignments-dir-path"] + "loglikes_"+name_set+".ark"
+        config_dict["gop-scores-dir"]        = data_path    + "gop_scores/"   
+        config_dict["gop-txt-name"]          = 'gop-'+name_set+'.txt'
+        config_dict["test-list-path"]        = data_path + "/" + spkr_wav_list
+        config_dict["utterance-list-path"]   = config_dict["test-list-path"]
+        config_dict["features-conf-path"]    = data_path + "features/conf"
+        config_dict["features-path"]         = data_path + "features/"+name_set
+        config_dict["wavs_list"]             = data_path + "/" + wavs_list
+
+
+        self.config_dict = config_dict
+
