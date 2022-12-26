@@ -14,6 +14,10 @@ from src.utils.utils import makedirs_for_file
 from src.pytorch_models.FTDNNAcoustic import *
 from IPython import embed
 
+
+import gc
+
+
 def log_alignments(aligner, phones, alignment, logid, align_output_fh):
     phone_alignment = aligner.to_phone_alignment(alignment, phones)
     transition_lists = []
@@ -26,7 +30,21 @@ def log_alignments(aligner, phones, alignment, logid, align_output_fh):
         align_output_fh.write(str(transition_list) + ' ')
     align_output_fh.write('\n')
 
-def main(config_dict):
+import ctypes
+
+class PyObject(ctypes.Structure):
+    _fields_ = [("refcnt", ctypes.c_long)]
+
+    @classmethod
+    def ref_count(cls, id):
+        return cls.from_address(id).refcnt
+
+
+def main(config_dict, model=None):
+
+    #gc.set_threshold(1, 1, 1)
+
+
     sample_list_path      = config_dict['utterance-list-path']
     acoustic_model_path   = config_dict['acoustic-model-path']
     transition_model_path = config_dict['transition-model-path']
@@ -58,33 +76,74 @@ def main(config_dict):
                                          word_boundary_path)
 
 
-    # Instantiate the PyTorch acoustic model (subclass of torch.nn.Module)
-    model = FTDNNAcoustic()
-    model.load_state_dict(torch.load(acoustic_model_path))
-    model.eval()
+    
+    if model == None:
+        # Instantiate the PyTorch acoustic model (subclass of torch.nn.Module)
+        model = FTDNNAcoustic()
+        model.load_state_dict(torch.load(acoustic_model_path))
+        model.eval()
 
     #Create feature manager
     feature_manager = FeatureManager(epadb_root_path, features_path, conf_path)
+    
 
-    makedirs_for_file(align_path)
-    align_out_file = open(align_path,"w+")
-    # Decode and write output lattices
-    with DoubleMatrixWriter(loglikes_wspec) as loglikes_writer:
-        for line in tqdm.tqdm(open(sample_list_path,'r').readlines()):
-            logid = line.split()[0]
-            feats = feature_manager.get_features_for_logid(logid)
-            text =  feature_manager.get_transcription_for_logid(logid, trans_path)
-            text = text.upper()
-            feats = torch.unsqueeze(feats, 0)
-            loglikes = model(feats)                         # Compute log-likelihoods
-            loglikes = Matrix(loglikes.detach().numpy()[0]) # Convert to PyKaldi matrix
-            
-            if not app:
+
+    if not os.path.exists(align_path):
+        makedirs_for_file(align_path)
+        align_out_file = open(align_path,"w+")
+        # Decode and write output lattices
+        with DoubleMatrixWriter(loglikes_wspec) as loglikes_writer:
+            for line in tqdm.tqdm(open(sample_list_path,'r').readlines()):
+                logid = line.split()[0]
+                feats = feature_manager.get_features_for_logid(logid)
+                text =  feature_manager.get_transcription_for_logid(logid, trans_path)
+                text = text.upper()
+                feats = torch.unsqueeze(feats, 0)
+                loglikes = model(feats)                         # Compute log-likelihoods
+                loglikes = Matrix(loglikes.detach().numpy()[0]) # Convert to PyKaldi matrix
+                
                 loglikes_writer[logid] = loglikes
-            
-            out = aligner.align(loglikes, text)
-            
-            log_alignments(aligner, phones, out["alignment"], logid, align_out_file)
-            #phone_alignment = aligner.to_phone_alignment(out["alignment"], phones)
-            #align_out_file.write(logid + ' phones ' + str(phone_alignment)  + '\n')
-            #align_out_file.write(logid + ' transitions ' + str(out['alignment']) + '\n') 
+
+
+                out = aligner.align(loglikes, text)
+                
+                log_alignments(aligner, phones, out["alignment"], logid, align_out_file)
+
+                #print("ALIGNER")
+                #embed()
+   
+        '''
+        id_a = id(aligner)
+        id_b = id(wb_info)
+        id_c = id(feature_manager)
+        id_d = id(loglikes_writer)
+        id_e = id(feats)
+        id_f = id(loglikes)
+        id_g = id(out)
+
+        print(PyObject.ref_count(id_a)) # 2
+        print(PyObject.ref_count(id_b)) # 1
+        print(PyObject.ref_count(id_c)) # 2
+        print(PyObject.ref_count(id_d)) # 1
+        print(PyObject.ref_count(id_e)) # 2
+        print(PyObject.ref_count(id_f)) # 1
+        print(PyObject.ref_count(id_g)) # 2
+
+        del aligner
+        del wb_info
+        del feature_manager
+        del loglikes_writer
+        del feats
+        del loglikes
+        del out
+        print("DESPUES")
+        print(PyObject.ref_count(id_a)) # 2
+        print(PyObject.ref_count(id_b)) # 1
+        print(PyObject.ref_count(id_c)) # 2
+        print(PyObject.ref_count(id_d)) # 1
+        print(PyObject.ref_count(id_e)) # 2
+        print(PyObject.ref_count(id_f)) # 1
+        print(PyObject.ref_count(id_g)) # 2
+
+        #embed()
+        '''
