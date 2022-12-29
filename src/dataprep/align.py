@@ -40,7 +40,7 @@ class PyObject(ctypes.Structure):
         return cls.from_address(id).refcnt
 
 
-def main(config_dict, model=None):
+def main(config_dict, model=None, aligner=None):
 
     #gc.set_threshold(1, 1, 1)
 
@@ -69,8 +69,10 @@ def main(config_dict, model=None):
 
     loglikes_wspec = "ark:" + loglikes_path
 
-    aligner = MappedAligner.from_files(transition_model_path, tree_path, lang_graph_path, words_path,
-                                     disam_path, acoustic_scale = 1.0)
+    if aligner == None:
+        print("CREA ALIGNER")
+        aligner = MappedAligner.from_files(transition_model_path, tree_path, lang_graph_path, words_path, disam_path, acoustic_scale = 1.0)
+    
     phones  = SymbolTable.read_text(phones_path)
     wb_info = WordBoundaryInfo.from_file(WordBoundaryInfoNewOpts(),
                                          word_boundary_path)
@@ -109,41 +111,3 @@ def main(config_dict, model=None):
                 
                 log_alignments(aligner, phones, out["alignment"], logid, align_out_file)
 
-                #print("ALIGNER")
-                #embed()
-   
-        '''
-        id_a = id(aligner)
-        id_b = id(wb_info)
-        id_c = id(feature_manager)
-        id_d = id(loglikes_writer)
-        id_e = id(feats)
-        id_f = id(loglikes)
-        id_g = id(out)
-
-        print(PyObject.ref_count(id_a)) # 2
-        print(PyObject.ref_count(id_b)) # 1
-        print(PyObject.ref_count(id_c)) # 2
-        print(PyObject.ref_count(id_d)) # 1
-        print(PyObject.ref_count(id_e)) # 2
-        print(PyObject.ref_count(id_f)) # 1
-        print(PyObject.ref_count(id_g)) # 2
-
-        del aligner
-        del wb_info
-        del feature_manager
-        del loglikes_writer
-        del feats
-        del loglikes
-        del out
-        print("DESPUES")
-        print(PyObject.ref_count(id_a)) # 2
-        print(PyObject.ref_count(id_b)) # 1
-        print(PyObject.ref_count(id_c)) # 2
-        print(PyObject.ref_count(id_d)) # 1
-        print(PyObject.ref_count(id_e)) # 2
-        print(PyObject.ref_count(id_f)) # 1
-        print(PyObject.ref_count(id_g)) # 2
-
-        #embed()
-        '''
