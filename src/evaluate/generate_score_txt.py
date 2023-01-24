@@ -89,7 +89,7 @@ def main(config_dict, model=None):
     testset = EpaDB(sample_list, phone_list_path, labels_dir, features_path, conf_path, app=app)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
                                               shuffle=False, num_workers=0, collate_fn=collate_fn_padd)
-    if model == None and not app:
+    if model == None:
 
         phone_count = testset.phone_count()
 
