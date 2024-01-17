@@ -80,7 +80,8 @@ The examples correspond to the hyperparameters resulting in the system with the 
 
 
 ## Copyright
-The code in this repository and the EpaDB database were developed at the Speech Lab at Universidad de Buenos Aires, Argentina and are freely available for research purposes. 
+The code in this repository and the EpaDB database were developed at the Speech Lab at Universidad de Buenos Aires, Argentina and are freely available for research purposes under CC BY-NC-ND 4.0 DEED
+licence. More information read: https://creativecommons.org/licenses/by-nc-nd/4.0/
 
 If you use the EpaDB database, please cite the following paper:
 
